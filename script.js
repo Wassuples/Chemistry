@@ -26,6 +26,7 @@ async function translateCompound() {
 	const input = document.getElementById("inputField").value.trim(); // Get user input
 	const outputDiv = document.getElementById("output"); // Output display area
 	const loadingSpinner = document.getElementById("loadingSpinner"); // Loading spinner element
+	const showTranslated = document.getElementById("toggleTranslation").checked; // Get toggle state
 
 	// Validate input
 	if (!input) {
@@ -61,8 +62,10 @@ async function translateCompound() {
 	// Display the result or an error message
 	if (result) {
 		const formattedFormula = formatWithSubscript(result.formula);
+		const translatedText = showTranslated ? await translateToArabic(result.name) : result.name;
+
 		outputDiv.style.display = "block";
-		outputDiv.innerHTML = `<strong>Name:</strong> ${result.name}<br><strong>Formula:</strong> ${formattedFormula}`;
+		outputDiv.innerHTML = `<strong>Name:</strong> ${translatedText}<br><strong>Formula:</strong> ${formattedFormula}`;
 	} else {
 		outputDiv.style.display = "block";
 		outputDiv.innerHTML = "Compound not found.";
@@ -95,8 +98,7 @@ async function fetchCompoundByFormula(formula) {
 		// Extract compound data if available
 		if (data && data.PC_Compounds && data.PC_Compounds.length > 0) {
 			const compound = data.PC_Compounds[0];
-			const name = compound.props.find((p) => p.urn.label === "IUPAC Name")
-				?.value.sval;
+			const name = compound.props.find((p) => p.urn.label === "IUPAC Name")?.value.sval;
 			return {
 				name: name || "Unknown",
 				formula: formula,
@@ -175,8 +177,7 @@ async function pollForResult(listKey) {
 
 		// Extract name and formula from the result
 		if (result) {
-			const name = result.props.find((p) => p.urn.label === "IUPAC Name")?.value
-				.sval;
+			const name = result.props.find((p) => p.urn.label === "IUPAC Name")?.value.sval;
 			const formula = result.props.find(
 				(p) => p.urn.label === "Molecular Formula",
 			)?.value.sval;
@@ -190,6 +191,22 @@ async function pollForResult(listKey) {
 	}
 
 	return null; // Return null if no result is found
+}
+
+// Translate text to Arabic using a free translation API
+async function translateToArabic(text) {
+	const apiUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ar`;
+
+	try {
+		const response = await fetch(apiUrl);
+		const data = await response.json();
+		if (data.responseData && data.responseData.translatedText) {
+			return data.responseData.translatedText;
+		}
+	} catch (error) {
+		console.error("Error during translation:", error);
+	}
+	return text; // Return the original text if translation fails
 }
 
 // Add an event listener for the input field to trigger translation on Enter key press
